@@ -35,10 +35,29 @@ module ActiveMerchant #:nodoc:
         @access_token = setup_access_token
       end
 
-      def purchase(money, card, options = {})
-        requires!(options, :return_url)
+      def create_payment_intent(money, options = {})
+        post = {}
+        add_invoice(post, money, options)
+        add_order(post, options)
+        post[:request_id] = "#{request_id(options)}_setup"
+        post[:merchant_order_id] = merchant_order_id(options)
+        add_referrer_data(post)
+        add_descriptor(post, options)
+        response = commit(:setup, post)
+        raise ArgumentError.new(response.message) unless response.success?
+        response
+      end
 
-        payment_intent_id = create_payment_intent(money, options)
+      def purchase(money, card, options = {})
+        byebug
+        requires!(options, :return_url)
+        byebug
+        if card.intent_id.present?
+          payment_intent_id = card.intent_id
+        else
+          payment_intent_id = create_payment_intent(money, options)
+        end
+
         post = {
           'request_id' => request_id(options),
           'merchant_order_id' => merchant_order_id(options),
@@ -142,21 +161,6 @@ module ActiveMerchant #:nodoc:
 
       def add_referrer_data(post)
         post[:referrer_data] = { type: 'spreedly' }
-      end
-
-      def create_payment_intent(money, options = {})
-        post = {}
-        add_invoice(post, money, options)
-        add_order(post, options)
-        post[:request_id] = "#{request_id(options)}_setup"
-        post[:merchant_order_id] = merchant_order_id(options)
-        add_referrer_data(post)
-        add_descriptor(post, options)
-
-        response = commit(:setup, post)
-        raise ArgumentError.new(response.message) unless response.success?
-
-        response.params['id']
       end
 
       def add_billing(post, card, options = {})
