@@ -49,9 +49,7 @@ module ActiveMerchant #:nodoc:
       end
 
       def purchase(money, card, options = {})
-        byebug
         requires!(options, :return_url)
-        byebug
         if card.intent_id.present?
           payment_intent_id = card.intent_id
         else
